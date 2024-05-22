@@ -1,0 +1,9 @@
+*pyc
+*pth
+*onnx
+
+__pycache__/
+.vscode/
+outputs/
+logs/
+bak*
