@@ -1,3 +1,11 @@
+'''
+Author: Cristiano-3 chunanluo@126.com
+Date: 2024-06-04 18:00:13
+LastEditors: Cristiano-3 chunanluo@126.com
+LastEditTime: 2024-06-05 16:13:49
+FilePath: /PyTorch-PPOCRv4-Rec/ppocr/modeling/necks/rnn.py
+Description: SequenceEncoders
+'''
 import torch
 import torch.nn as nn
 from ppocr.modeling.backbones.rec_svtrnet import Block, ConvBNLayer

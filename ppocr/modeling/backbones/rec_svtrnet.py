@@ -1,3 +1,11 @@
+'''
+Author: Cristiano-3 chunanluo@126.com
+Date: 2024-06-03 10:00:13
+LastEditors: Cristiano-3 chunanluo@126.com
+LastEditTime: 2024-06-05 16:17:14
+FilePath: /PyTorch-PPOCRv4-Rec/ppocr/modeling/backbones/rec_svtrnet.py
+Description: SVTRNet
+'''
 import torch
 import torch.nn as nn
 import numpy as np
