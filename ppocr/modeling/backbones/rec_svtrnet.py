@@ -23,7 +23,7 @@ def drop_path(x, drop_prob=0., training=False):
     shape = (x.shape[0], ) + (1, ) * (x.ndim - 1)
     random_tensor = keep_prob + torch.rand(shape, dtype=x.dtype)
     random_tensor = torch.floor(random_tensor)  # binarize
-    output = x.divide(keep_prob) * random_tensor
+    output = x.divide(keep_prob) * random_tensor.to(x.device) # cpu/gpu
     return output
 
 
@@ -180,6 +180,7 @@ class Attention(nn.Module):
 
         attn = (q.matmul(k.permute(0, 1, 3, 2)))
         if self.mixer == 'Local':
+            self.mask = self.mask.to(x.device) # cpu/gpu
             attn += self.mask
         attn = nn.functional.softmax(attn, dim=-1)
         attn = self.attn_drop(attn)
