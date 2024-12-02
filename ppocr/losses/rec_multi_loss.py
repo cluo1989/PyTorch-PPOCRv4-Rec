@@ -1,6 +1,7 @@
 from torch import nn
 from rec_ctc_loss import CTCLoss
 from rec_sar_loss import SARLoss
+from rec_nrtr_loss import NRTRLoss
 
 
 class MultiLoss(nn.Module):
@@ -27,6 +28,8 @@ class MultiLoss(nn.Module):
                 loss = loss_func(predicts['ctc'], batch[:2] + batch[3:]) * self.weight1
             elif name == 'SARLoss':
                 loss = loss_func(predicts['sar'], batch[:1] + batch[2:]) * self.weight2
+            elif name == 'NRTRLoss':
+                loss = loss_func(predicts['gtc'], batch[:1] + batch[2:]) * self.weight2
             else:
                 raise NotImplementedError(f'{name} is not supported in MultiLoss yet.')
             
