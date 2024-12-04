@@ -1,5 +1,5 @@
-from charset import alphabet as charset
-from error_label_dict import errlabel
+from .charset import alphabet as charset
+from .error_label_dict import errlabel
 
 word2indexs = {}
 indexs2word = {}
