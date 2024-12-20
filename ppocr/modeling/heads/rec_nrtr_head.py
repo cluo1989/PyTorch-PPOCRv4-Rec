@@ -470,7 +470,7 @@ class TransformerBlock(nn.Module):
         self.mlp = Mlp(
             in_features=d_model, 
             hidden_features=dim_feedforward, 
-            act_layer=nn.ReLU, 
+            act_layer='relu', 
             drop=residual_dropout_rate
         )
 

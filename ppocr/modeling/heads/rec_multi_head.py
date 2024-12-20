@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 from ppocr.modeling.necks.rnn import Im2Seq, SequenceEncoder
+from .rec_ctc_head import CTCHead
 from .rec_nrtr_head import Transformer
 
 
