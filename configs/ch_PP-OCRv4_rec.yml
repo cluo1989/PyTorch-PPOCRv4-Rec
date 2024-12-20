@@ -1,7 +1,21 @@
+CUDNN:
+  BENCHMARK: True
+  DETERMINISTIC: False
+  ENABLED: True
+
+RESUME:
+  ''
 Global:
+  SEED: 1024
   debug: false
   use_gpu: false #true
-  epoch_num: 200
+
+  start_eopch: 0
+  epoch_num: 1000
+
+  lr_step: 10
+  lr_factor: 0.1
+
   log_smooth_window: 20
   print_batch_step: 10
   save_model_dir: ./output/rec_ppocr_v4
@@ -25,9 +39,10 @@ Optimizer:
   name: Adam
   beta1: 0.9
   beta2: 0.999
+  epsilon: 1.0e-8
   lr:
     name: Cosine
-    learning_rate: 0.001
+    learning_rate: 0.0001 #0.001
     warmup_epoch: 5
   regularizer:
     name: L2
@@ -110,6 +125,7 @@ Train:
     batch_size_per_card: *bs
     drop_last: true
     num_workers: 8
+    pin_memory: True
 Eval:
   dataset:
     name: SimpleDataSet
@@ -136,3 +152,4 @@ Eval:
     drop_last: false
     batch_size_per_card: 128
     num_workers: 4
+    pin_memory: True
