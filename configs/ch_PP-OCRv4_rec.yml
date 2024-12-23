@@ -88,6 +88,8 @@ Metric:
 
 Train:
   dataset:
+    label_file: ''
+    image_dir: ''
     name: MultiScaleDataSet
     ds_width: false
     data_dir: ./train_data/
@@ -128,6 +130,8 @@ Train:
     pin_memory: True
 Eval:
   dataset:
+    label_file: ''
+    image_dir: ''
     name: SimpleDataSet
     data_dir: ./train_data
     label_file_list:
