@@ -232,7 +232,7 @@ def main(config, local_rank=0):
     # model = DistributedDataParallel(model)
 
     # build dataset
-    trainset = RecDataset(config['Train']['dataset'])
+    trainset = RecDataset(config['Train']['dataset']['label_file'], config['Train']['dataset']['image_dir'])
     # trainsampler = DistributedSampler(trainset)
     train_ld_conf = config['Train']['loader']
     trainloader = DataLoader(
@@ -245,7 +245,7 @@ def main(config, local_rank=0):
         # sampler=trainsampler
     )
 
-    valset = RecDataset(config['Eval']['dataset'])
+    valset = RecDataset(config['Eval']['dataset']['label_file'], config['Eval']['dataset']['image_dir'])
     # valsampler = DistributedSampler(valset)
     val_ld_conf = config['Eval']['loader']
     valloader = DataLoader(
