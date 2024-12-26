@@ -1,7 +1,7 @@
 import torch
 from torch import nn
-# from datasets.charset import alphabet
-BLANK_INDEX = 8535#len(alphabet)
+from datasets.charset import alphabet
+BLANK_INDEX = len(alphabet)
 
 
 class CTCLoss(nn.Module):
