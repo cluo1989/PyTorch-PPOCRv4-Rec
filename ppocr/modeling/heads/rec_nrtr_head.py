@@ -409,7 +409,7 @@ class MultiheadAttention(nn.Module):
         if self.self_attn:
             qkv = (
                 self.qkv(query)
-                .reshape(0, qN, 3, self.num_heads, self.head_dim)
+                .reshape(-1, qN, 3, self.num_heads, self.head_dim)
                 .permute(2, 0, 3, 1, 4)
             )
             q, k, v = qkv[0], qkv[1], qkv[2]
@@ -417,12 +417,12 @@ class MultiheadAttention(nn.Module):
             kN = key.shape[1]
             q = (
                 self.q(query)
-                .reshape(0, qN, self.num_heads, self.head_dim)
+                .reshape(-1, qN, self.num_heads, self.head_dim)
                 .permute(0, 2, 1, 3)
             )
             kv = (
                 self.kv(key)
-                .reshape(0, kN, 2, self.num_heads, self.head_dim)
+                .reshape(-1, kN, 2, self.num_heads, self.head_dim)
                 .permute(2, 0, 3, 1, 4)
             )
             k, v = kv[0], kv[1]
@@ -434,7 +434,7 @@ class MultiheadAttention(nn.Module):
         attn = F.softmax(attn, dim=-1)
         attn = self.attn_drop(attn)
 
-        x = torch.matmul(attn, v).permute(0, 2, 1, 3).reshape(0, qN, self.embed_dim)
+        x = torch.matmul(attn, v).permute(0, 2, 1, 3).reshape(-1, qN, self.embed_dim)
         x = self.out_proj(x)
         return x
 
