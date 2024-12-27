@@ -94,9 +94,12 @@ class Transformer(nn.Module):
         self.beam_size = beam_size
         self.d_model = d_model
         self.nhead = nhead
+
+        # Attention!!! shape of weight of Linear: (out_features, in_features)
+        # Applies an affine linear transformation to the incoming data: y = x*A_T + b
         self.tgt_word_prj = nn.Linear(d_model, self.out_channels, bias=False)
         w0 = np.random.normal(
-            0.0, d_model ** -0.5, (d_model, self.out_channels)
+            0.0, d_model ** -0.5, (self.out_channels, d_model)
         ).astype(np.float32)
         self.tgt_word_prj.weight.data = torch.from_numpy(w0)
         self.apply(self._init_weights)
