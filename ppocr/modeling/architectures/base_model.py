@@ -75,7 +75,7 @@ class BaseModel(nn.Module):
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
 
-    def forward(self, x):
+    def forward(self, x, data=None):
         y = dict()
         if self.use_transform:
             x = self.transform(x)
@@ -100,7 +100,7 @@ class BaseModel(nn.Module):
             final_name = 'neck_out'
 
         if self.use_head:
-            x = self.head(x)
+            x = self.head(x, targets=data)
 
             if isinstance(x, dict) and 'ctc_neck' in x.keys():
                 y['neck_out'] = x['ctc_neck']
