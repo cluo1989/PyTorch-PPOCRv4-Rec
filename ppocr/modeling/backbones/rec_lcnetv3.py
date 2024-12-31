@@ -335,7 +335,7 @@ class PPLCNetV3(nn.Module):
             len(self.lr_mult_list))
 
         self.conv1 = ConvBNLayer(
-            in_channels=3,
+            in_channels=1,
             out_channels=make_divisible(16 * scale),
             kernel_size=3,
             stride=2,
@@ -455,7 +455,7 @@ class PPLCNetV3(nn.Module):
         if self.training:
             x = F.adaptive_avg_pool2d(x, [1, 40])
         else:
-            x = F.avg_pool2d(x, [3, 2])
+            x = F.avg_pool2d(x, [2, 2]) #[3, 2])
         return x
 
 
