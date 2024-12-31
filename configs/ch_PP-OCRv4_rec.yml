@@ -4,7 +4,15 @@ CUDNN:
   ENABLED: True
 
 RESUME:
-  ''
+  './output/rec_ppocr_v4/checkpoint_0_429_27.6858_0.0.pth'
+
+PRINT_FREQ:
+  10
+SAVE_FREQ:
+  1000
+OUTPUT_DIR:
+  './output/rec_ppocr_v4'
+
 Global:
   SEED: 1024
   debug: false
@@ -18,7 +26,7 @@ Global:
 
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: ./output/rec_ppocr_v4
+  # save_model_dir: ./output/rec_ppocr_v4
   save_epoch_step: 10
   eval_batch_step: [0, 2000]
   cal_metric_during_train: true
@@ -27,12 +35,12 @@ Global:
   save_inference_dir:
   use_visualdl: false
   infer_img: doc/imgs_words/ch/word_1.jpg
-  character_dict_path: ppocr/utils/ppocr_keys_v1.txt
+  # character_dict_path: ppocr/utils/ppocr_keys_v1.txt
   max_text_length: &max_text_length 25
   infer_mode: false
   use_space_char: true
   distributed: true
-  save_res_path: ./output/rec/predicts_ppocrv3.txt
+  # save_res_path: ./output/rec/predicts_ppocrv3.txt
 
 
 Optimizer:
@@ -50,6 +58,7 @@ Optimizer:
 
 
 Architecture:
+  in_channels: 1
   model_type: rec
   algorithm: SVTR_LCNet
   Transform:
@@ -90,12 +99,24 @@ Train:
   dataset:
     label_file: ''
     image_dir: ''
+    train:
+      real:
+        label_file: './datas/train_real.txt'
+        image_dir: './datas/images/'
+      simu:
+        label_file: './datas/train_simu.txt'
+        image_dir: './datas/images/'
+    val:
+      label_file: './datas/val_real.txt'
+      image_dir: './datas/images/'
+
     name: MultiScaleDataSet
     ds_width: false
     data_dir: ./train_data/
     ext_op_transform_idx: 1
     label_file_list:
     - ./train_data/train_list.txt
+    
     transforms:
     - DecodeImage:
         img_mode: BGR
@@ -118,7 +139,7 @@ Train:
   sampler:
     name: MultiScaleSampler
     scales: [[320, 32], [320, 48], [320, 64]]
-    first_bs: &bs 192
+    first_bs: &bs 4 #192
     fix_bs: false
     divided_factor: [8, 16] # w, h
     is_training: True
@@ -126,7 +147,7 @@ Train:
     shuffle: true
     batch_size_per_card: *bs
     drop_last: true
-    num_workers: 8
+    num_workers: 4 #8
     pin_memory: True
 Eval:
   dataset:
@@ -154,6 +175,6 @@ Eval:
   loader:
     shuffle: false
     drop_last: false
-    batch_size_per_card: 128
+    batch_size_per_card: 4 #128
     num_workers: 4
     pin_memory: True
