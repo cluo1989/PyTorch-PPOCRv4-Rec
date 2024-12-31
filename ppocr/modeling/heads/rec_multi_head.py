@@ -119,6 +119,7 @@ class MultiHead(nn.Module):
             sar_out = self.sar_head(x, targets[1:])
             head_out['sar'] = sar_out
         else:
+            # targets: labels_ctc, labels_gtc, label_lengths
             gtc_out = self.gtc_head(self.before_gtc(x), targets[1:])
             head_out['gtc'] = gtc_out
         return head_out
