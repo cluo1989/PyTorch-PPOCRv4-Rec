@@ -5,9 +5,10 @@ from torch.utils import data
 from PIL import Image, ImageOps
 import numpy as np
 import random
-from ppocr.datasets.label_converter import encode
+# from ppocr.datasets.label_converter import encode
 from ppocr.datasets.image_tool import resize_norm_img, random_pad
 from ppocr.datasets.augmenter import ImageAugmenter
+from ppocr.datasets.label_encoders import CTCLabelEncode, NRTRLabelEncode
 
 
 class RecDataset(data.Dataset):
@@ -19,25 +20,28 @@ class RecDataset(data.Dataset):
                  name=''):
         super().__init__()
         self.image_shape = [32, 320*2, 1]
-        self.max_label_len = 40#20 # 25
+        self.max_label_len = 25 #40#20 # 25
         self.delimiter = '    '
         self.old_image_dir = '/home/datasets/'
         self.augmenter = ImageAugmenter()
+        self.ctc_encoder = CTCLabelEncode(self.max_label_len)
+        self.gtc_encoder = NRTRLabelEncode(self.max_label_len)
+
         self.real_samples = self.load_labels(real_label_file, real_image_dir)#[:64]
         # random.shuffle(self.real_samples)
         # print('shuffle real samples, init')
 
         if simu_label_file is not None and simu_image_dir is not None:
             self.simu_samples = self.load_labels(simu_label_file, simu_image_dir)#[:128]
-            self.simu_samples = self.simu_samples + self.load_labels('/home/datasets/synthetic_new8537_en/train_real.txt', '/home/datasets/') # simu english datas
-            self.real_samples = self.real_samples + 10*self.load_labels('/home/datasets/real_english/train_real.txt', '/home/datasets/') # real english datas
+            #self.simu_samples = self.simu_samples + self.load_labels('/home/datasets/synthetic_new8537_en/train_real.txt', '/home/datasets/') # simu english datas
+            #self.real_samples = self.real_samples + 10*self.load_labels('/home/datasets/real_english/train_real.txt', '/home/datasets/') # real english datas
 
             # random.shuffle(self.simu_samples)
             # print('shuffle simu samples, init')
             self.real_ratio = 0.5
             self.simu_ratio = 1 - self.real_ratio
         else:
-            self.real_samples = self.real_samples + self.load_labels('/home/datasets/real_english/val_real.txt', '/home/datasets/') # real english datas
+            #self.real_samples = self.real_samples + self.load_labels('/home/datasets/real_english/val_real.txt', '/home/datasets/') # real english datas
             self.simu_samples = []
             self.real_ratio = 1.0
             self.simu_ratio = 0
@@ -76,7 +80,7 @@ class RecDataset(data.Dataset):
 
     def load_labels(self, label_file, image_dir):
         samples = []
-        with open(label_file, 'r') as fin:
+        with open(label_file, 'r', encoding='utf-8') as fin:
             lines = fin.readlines()
             for line in lines:
                 if self.delimiter not in line:
@@ -102,13 +106,15 @@ class RecDataset(data.Dataset):
                     self.debug_print('@@@@:', label)
                     continue
 
-                label = encode(label)
-                if label is None:
-                    self.debug_print('encode failed:', label)
+                label_ctc = self.ctc_encoder({'label': label})
+                label_gtc = self.gtc_encoder({'label': label})
+
+                if label_ctc is None:
+                    self.debug_print('ctc encode failed:', label)
                     continue
 
-                if len(label) > self.max_label_len:
-                    self.debug_print('long label(>25):', label)
+                if label_gtc is None:
+                    self.debug_print('gtc encode failed:', label)
                     continue
 
                 image_name = image_name.replace(self.old_image_dir, '')
@@ -117,7 +123,7 @@ class RecDataset(data.Dataset):
                 if not os.path.exists(image_file):
                     continue
 
-                samples.append((image_file, label))
+                samples.append((image_file, label_ctc, label_gtc))
         return samples
 
     def __len__(self):
@@ -126,7 +132,7 @@ class RecDataset(data.Dataset):
 
     def __getitem__(self, index):
         # load sample
-        image_file, label = self.total_samples[index]
+        image_file, label_ctc, label_gtc = self.total_samples[index]
         image = Image.open(image_file).convert('L')
         image = ImageOps.exif_transpose(image)
 
@@ -157,13 +163,14 @@ class RecDataset(data.Dataset):
         image = torch.from_numpy(image).float()
         image = image.permute([2,0,1])
 
-        # pad label
-        label = np.array(label, dtype=np.int32)
-        pad_label = np.zeros(self.max_label_len, dtype=np.int32) #8275*np.ones(self.max_label_len)
-        pad_label[:len(label)] = label
+        # # pad label
+        # label = np.array(label, dtype=np.int32)
+        # pad_label = np.zeros(self.max_label_len, dtype=np.int32) #8275*np.ones(self.max_label_len)
+        # pad_label[:len(label)] = label
 
-        label_len = len(label)#np.array([])
-        return image, pad_label, label_len
+        # label_len = len(label)#np.array([])
+        # return image, pad_label, label_len
+        return [image, label_ctc['label'], label_gtc['label'], label_ctc['length']]
 
 
 if __name__ == '__main__':
