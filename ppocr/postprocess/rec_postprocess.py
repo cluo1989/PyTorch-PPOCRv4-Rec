@@ -1,5 +1,5 @@
 from ppocr.datasets.charset import alphabet
-BLANK_INDEX = len(alphabet)
+BLANK_INDEX = 0  # len(alphabet)
 
 
 class BaseRecLabelDecoder(object):
@@ -21,7 +21,7 @@ class CTCDecoder(BaseRecLabelDecoder):
         for idx, char_idx in enumerate(argmax_idx):
             if char_idx != BLANK_INDEX:
                 # get max prob and it's char
-                prob = prob[idx]
+                prob = probs[idx]
                 char = alphabet[char_idx]
                 item = [char, prob, 1]
 
