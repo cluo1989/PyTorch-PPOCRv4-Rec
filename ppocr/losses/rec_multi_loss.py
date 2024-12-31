@@ -1,7 +1,7 @@
 from torch import nn
-from rec_ctc_loss import CTCLoss
-from rec_sar_loss import SARLoss
-from rec_nrtr_loss import NRTRLoss
+from ppocr.losses.rec_ctc_loss import CTCLoss
+from ppocr.losses.rec_sar_loss import SARLoss
+from ppocr.losses.rec_nrtr_loss import NRTRLoss
 
 
 class MultiLoss(nn.Module):
@@ -22,6 +22,11 @@ class MultiLoss(nn.Module):
     def forward(self, predicts, batch):
         self.total_loss = {}
         total_loss = 0.0
+
+        # eval mode
+        if not self.training:
+            self.total_loss['loss'] = self.loss_funcs['CTCLoss'](predicts, batch[:2] + batch[3:])
+            return self.total_loss
 
         for name, loss_func in self.loss_funcs.items():
             if name == 'CTCLoss':

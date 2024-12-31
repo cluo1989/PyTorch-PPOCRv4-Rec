@@ -1,7 +1,7 @@
 import torch
 from torch import nn
-from datasets.charset import alphabet
-BLANK_INDEX = len(alphabet)
+# from datasets.charset import alphabet
+BLANK_INDEX = 0  # len(alphabet)
 
 
 class CTCLoss(nn.Module):
@@ -10,13 +10,16 @@ class CTCLoss(nn.Module):
         self.loss_func = nn.CTCLoss(blank=BLANK_INDEX, reduction='mean')
         self.use_focal_loss = use_focal_loss
 
-    def forward(self, logits, labels, label_lengths):
+    def forward(self, logits, batch):
         logits = logits.permute(1, 0, 2)  # N T C -> T N C
         pred_probs = torch.log_softmax(logits, dim=2)
 
         batch_size = logits.shape[1]
         time_steps = logits.shape[0]
         pred_lengths = torch.full((batch_size, ), time_steps)
+
+        labels = batch[1]
+        label_lengths = batch[2]
 
         loss = self.loss_func(pred_probs, labels, pred_lengths, label_lengths)
 

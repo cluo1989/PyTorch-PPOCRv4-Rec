@@ -16,12 +16,12 @@ class NRTRLoss(nn.Module):
         max_len = labels[2].max()
         tgt = labels[1][:, 1 : max_len + 2]
         tgt = tgt.reshape(-1)
-        logits = logits.reshape(-1, logits.shape[2])        
+        logits = logits.reshape(-1, logits.shape[2]) # N,T,C -> N*T,C
 
         if self.smoothing:
             eps = 0.1
             n_class = logits.shape[1]
-            one_hot = F.one_hot(tgt, n_class)
+            one_hot = F.one_hot(tgt.long(), n_class) # F.one_hot Takes LongTensor
             one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
             log_prb = F.log_softmax(logits, dim=1)
             non_pad_mask = torch.not_equal(tgt, torch.zeros(tgt.shape, dtype=tgt.dtype))
