@@ -233,7 +233,7 @@ def main(config, local_rank=0):
             if torch.cuda.is_available():
                 checkpoint = torch.load(resume_file, map_location=device)
             else:
-                checkpoint = torch.load(resume_file)
+                checkpoint = torch.load(resume_file, weights_only=True)
 
             # parse & load from checkpoint
             config['Global']['start_eopch'] = checkpoint['epoch']
