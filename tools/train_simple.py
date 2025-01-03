@@ -16,7 +16,7 @@ from torch.nn.parallel import DistributedDataParallel
 from argsparser import ArgsParser, load_config, merge_config
 from utils import AverageMeter, ProgressMeter, Summary
 from ppocr.modeling.architectures.base_model import BaseModel
-from ppocr.losses.rec_ctc_loss import CTCLoss
+from ppocr.losses.rec_multi_loss import MultiLoss
 from ppocr.optimizers.optimizer import Adam
 from ppocr.datasets.rec_dataset import RecDataset
 from ppocr.metrics.rec_metric import RecMetric
@@ -42,47 +42,55 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, device, c
     
     # train mode
     model.train()
+    criterion.train()
     num_batches = len(train_loader)
 
     end = time.time()
-    for i, (images, labels, label_lengths) in enumerate(train_loader):
+    for i, batch in enumerate(train_loader):
+        images = batch[0]
+        labels_ctc = batch[1]
+        labels_gtc = batch[2]
+        label_lengths = batch[3]
+
         # measure data loading time
         data_time.update(time.time() - end)
 
         # move data to the same device as model
         images = images.to(device, non_blocking=True)
-        labels = labels.to(device, non_blocking=True)
+        labels_ctc = labels_ctc.to(device, non_blocking=True)
+        labels_gtc = labels_gtc.to(device, non_blocking=True)
         label_lengths = label_lengths.to(device, non_blocking=True)
 
         # compute output
-        outputs = model(images)
-        loss  = criterion(outputs, labels, label_lengths)
+        outputs = model(images, batch[1:])#data=[labels_ctc, labels_gtc, label_lengths]
+        # loss  = criterion(outputs, labels_ctc, label_lengths) # ctc loss
+        loss  = criterion(outputs, batch)
 
         # measure acc and record loss
-        acc = accuracy(outputs, labels)['acc']
-        losses.update(loss.item(), images.size(0))
+        acc = accuracy(outputs['ctc'], labels_ctc)['acc']
+        losses.update(loss['loss'], images.size(0))
         accs.update(acc, images.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
-        loss.backward()
+        loss['loss'].backward()
         optimizer.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % config.PRINT_FREQ == 0:
+        if i % config['PRINT_FREQ'] == 0:
             progress.display(i + 1)
 
         # save checkpoint
         step = epoch * num_batches + i + 1
-        if step % config.SAVE_FREQ == 0:
+        if step % config['SAVE_FREQ'] == 0:
             save_file = os.path.join(
-                config.OUTPUT_DIR, 
+                config['OUTPUT_DIR'], 
                 ''.join([
                     f'checkpoint_{epoch}_{i}',
-                    f'_{round(loss.item(), 4)}',
+                    f'_{round(loss["loss"].item(), 4)}',
                     f'_{round(acc, 4)}.pth'
                 ])
                 )
@@ -92,7 +100,7 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, device, c
                 'step': step,
                 'best_acc':acc,
                 'loss': loss,
-                'state_dict': model.module.state_dict(),
+                'state_dict': model.state_dict(), #model.module.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'scheduler': scheduler.state_dict()
             }, save_file)
@@ -108,30 +116,39 @@ def validate(val_loader, model, criterion, device, config):
         prefix='Test: ')
     
     model.eval()
+    criterion.eval() # only ctc
 
     def run_validate(loader, base_progress=0):
         with torch.no_grad():
             end = time.time()
-            for i, (images, labels, label_lengths) in enumerate(loader):
+            for i, batch in enumerate(loader):
+                images = batch[0]
+                labels_ctc = batch[1]
+                labels_gtc = batch[2]
+                label_lengths = batch[3]
+
                 i = base_progress + i
+
+                # move data to the same device as model
                 images = images.to(device, non_blocking=True)
-                labels = labels.to(device, non_blocking=True)
+                labels_ctc = labels_ctc.to(device, non_blocking=True)
+                labels_gtc = labels_gtc.to(device, non_blocking=True)
                 label_lengths = label_lengths.to(device, non_blocking=True)
 
                 # compute output
-                output = model(images)
-                loss = criterion(output, labels, label_lengths)
+                outputs = model(images, batch[1:])  # outputs is out_ctc
+                loss = criterion(outputs, batch)    # only ctc
 
                 # measure acc and record loss
-                acc = accuracy(output, labels)['acc']
-                losses.update(loss.item(), images.size(0))
+                acc = accuracy(outputs, labels_ctc)['acc']
+                losses.update(loss['loss'], images.size(0))
                 accs.update(acc, images.size(0))
 
                 # measure elapsed time
                 batch_time.update(time.time() - end)
                 end = time.time()
 
-                if i % config.PRINT_FREQ == 0:
+                if i % config['PRINT_FREQ'] == 0:
                     progress.display(i + 1)
 
     run_validate(val_loader)
@@ -198,7 +215,7 @@ def main(config, local_rank=0):
 
     model = BaseModel(config['Architecture'])
     model.to(device)
-    criterion = CTCLoss().to(device)
+    criterion = MultiLoss(**config['Loss'])#.to(device)
     optimizer = Adam(config['Optimizer'])(model)
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer,
@@ -232,7 +249,14 @@ def main(config, local_rank=0):
     # model = DistributedDataParallel(model)
 
     # build dataset
-    trainset = RecDataset(config['Train']['dataset']['label_file'], config['Train']['dataset']['image_dir'])
+    trainset_conf = config['Train']['dataset']['train']
+    trainset = RecDataset(
+        trainset_conf['real']['label_file'], 
+        trainset_conf['real']['image_dir'],
+        trainset_conf['simu']['label_file'], 
+        trainset_conf['simu']['image_dir'],
+        name='TRAIN'
+        )
     # trainsampler = DistributedSampler(trainset)
     train_ld_conf = config['Train']['loader']
     trainloader = DataLoader(
@@ -245,7 +269,12 @@ def main(config, local_rank=0):
         # sampler=trainsampler
     )
 
-    valset = RecDataset(config['Eval']['dataset']['label_file'], config['Eval']['dataset']['image_dir'])
+    valset_conf = config['Train']['dataset']['val']
+    valset = RecDataset(
+        valset_conf['label_file'], 
+        valset_conf['image_dir'],
+        name='VAL'
+        )
     # valsampler = DistributedSampler(valset)
     val_ld_conf = config['Eval']['loader']
     valloader = DataLoader(
@@ -272,7 +301,7 @@ def main(config, local_rank=0):
             torch.save({
                 'epoch': epoch + 1,
                 'best_acc': best_acc,
-                'state_dict': model.module.state_dict(),
+                'state_dict': model.state_dict(),  #model.module.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'scheduler': scheduler.state_dict(),
             }, save_file)
